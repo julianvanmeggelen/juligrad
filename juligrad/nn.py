@@ -25,8 +25,6 @@ class Module:
     def __call__(self, *args: Any):
         return self.forward(*args)
 
-
-
 Activation = Union[ops.Sigmoid, ops.Identity]
   
 class Linear(Module):
