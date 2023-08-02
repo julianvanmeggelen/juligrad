@@ -2,7 +2,6 @@ from typing import Optional
 import numpy as np
 from juligrad.tensor import Tensor, DataLike
 
-
 class Optimizer:
     def __init__(self, params: list[Tensor], lr: float):
         self.params = params
