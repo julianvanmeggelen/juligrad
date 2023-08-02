@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Sequence, Union, TYPE_CHECKING
 import numpy as np
+import juligrad.tensor as tensor
 from juligrad.tensor import Tensor, DataLike
 
 class Op:
@@ -80,11 +81,6 @@ class Matmul(Op):
         return Tensor(data=np.matmul(a.data, b.data), sourceOp=self)
     
     def backward(self, grad_out: Tensor):
-        # print('grad_out', grad_out)
-        # print('grad_out.shape', grad_out.data.shape)
-        # print('self.a.shape', self.a.data.shape)
-        # print('self.b.shape', self.b.data.shape)
-
         self.b.backward(Tensor(data=np.matmul(self.a.data.T, grad_out.data), requiresGrad=False))
         self.a.backward(Tensor(data=np.matmul(grad_out.data, self.b.data.T), requiresGrad=False))
 
@@ -99,6 +95,14 @@ class Sigmoid(Op):
     def backward(self, grad_out: Tensor):
         self.a.backward(Tensor(data=grad_out.data * self.sigx * (1-self.sigx), shape=grad_out.shape, requiresGrad=False))
 
+class ReLU(Op):
+    def forward(self, a: Tensor) -> Tensor:
+        self.a = a
+        return Tensor(data=np.where(a.data > 0, a.data, 0 ), sourceOp=self)
+    
+    def backward(self, grad_out: Tensor):
+        self.a.backward(Tensor(data=np.where(self.a.data > 0, grad_out.data, 0 )))
+    
 class Identity(Op):
     def forward(self, a: Tensor) -> Tensor:
         self.a = a

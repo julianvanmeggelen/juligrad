@@ -10,7 +10,6 @@ class Optimizer:
 
     def zeroGrad(self):
         for param in self.params: param.zeroGrad()
-        
 
     def step(self):
         raise NotImplementedError

@@ -2,18 +2,18 @@ from typing import Any, Union
 from juligrad.tensor import Tensor
 import juligrad.ops as ops
 
-
 class Module:
     def forward(self, **kwargs: Any) -> Tensor:
         raise NotImplementedError
     
     def parameters(self, obj = None) -> list[Tensor]: 
-        print(type(obj))
         if obj is None: obj = self
         if isinstance(obj, Tensor):
             return [obj]
         
         res = []
+        if obj is None:
+            return []
         if isinstance(obj, dict):
             for k,v in obj.items(): res += self.parameters(v)
         if isinstance(obj, list):
@@ -25,7 +25,7 @@ class Module:
     def __call__(self, *args: Any):
         return self.forward(*args)
 
-Activation = Union[ops.Sigmoid, ops.Identity]
+Activation = Union[ops.Sigmoid, ops.Identity, ops.ReLU]
   
 class Linear(Module):
     def __init__(self, shapeIn: int, shapeOut: int):

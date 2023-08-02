@@ -1,17 +1,13 @@
 from __future__ import annotations
 import numpy as np
 from typing import Optional, Tuple, Union, TypeAlias, NewType, TYPE_CHECKING
-import juligrad.ops as ops
-
+ops = None
 DataLike: TypeAlias = NewType('DataLike', np.ndarray) #for now
-
-if TYPE_CHECKING:
-    from juligrad.ops import LazyOp
-
 
 class Tensor():
     def __init__(self, data:DataLike, shape: Optional[Tuple] = None, sourceOp: Optional[ops.Op] = None, requiresGrad: Optional[bool] = True):
-        if type(data) is list: return Tensor.fromList(a=data)
+        global ops; import juligrad.ops as ops #Hack, more elegant way of avoiding circular import?
+        if type(data) is list: data = np.array(data)
         self.data, self.shape, self.sourceOp, self.requiresGrad = data, shape, sourceOp, requiresGrad
         if shape is None: self.shape = data.shape if isinstance(data, np.ndarray) else ()
         self.requiresGrad = requiresGrad
@@ -46,8 +42,6 @@ class Tensor():
             if grad_out is None:
                 self.grad = Tensor.fromScalar(1)
             else:
-                #print(grad_out.data)
-                #print(self.data)
                 if not grad_out.shape == self.shape: raise ValueError(f"Shape of grad tensor ({grad_out.shape})  must be same as Tensor: ({self.shape})")
                 self.grad.data += grad_out.data
 
@@ -75,15 +69,16 @@ class Tensor():
     def __sub__(self, other): return ops.Sub().forward(self, other)
     def __matmul__(self, other): return ops.Matmul().forward(self,other)
     def __pow__(self, x): return self * self if x == 2.0 else NotImplementedError
-    def __neg__(self): new = self.copy(); new.assign(-self.data); return new
+    def __neg__(self): return Tensor(data = np.full(self.shape,-1)) * self
     def __eq__(self, other: Tensor): return Tensor.fromNumpy(self.data == other.data)
     def sigmoid(self): return ops.Sigmoid().forward(self)
+    def relu(self): return ops.ReLU().forward(self)
     def log(self): return ops.Log().forward(self)
     def expand(self, repeats: int, dim: int = 0): return ops.Expand().forward(self, repeats, dim)
     def sum(self): return ops.Sum().forward(self)
     def round(self, decimals: int): self.data = np.round(self.data, decimals=decimals); return self
-    def __str__(self): return self.data.__str__()
-    def ___repr__(self): return self.data.__repr__()
+    def __str__(self): return f"Tensor({self.data.__str__()})"
+    def ___repr__(self): return self.__str__()
 
 
 
