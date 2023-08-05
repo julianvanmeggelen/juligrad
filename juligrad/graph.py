@@ -10,17 +10,17 @@ def generateGraph(sink: Union[Op, Tensor]):
             node_text = f'''<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
                 <TR><TD>shape = {node.shape}</TD></TR>
                 <TR><TD>requiresGrad = {node.requiresGrad}</TD></TR>
-                <TR><TD BGCOLOR="#c9c9c9"><FONT FACE="Courier" POINT-SIZE="12">input</FONT></TD></TR>
+                <TR><TD BGCOLOR="#c9c9c9"><FONT FACE="Courier" POINT-SIZE="12">Tensor</FONT></TD></TR>
             </TABLE>>'''
         elif isinstance(node, Op):
             node_text = f'''<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
                 <TR><TD>name = {type(node).__name__}</TD></TR>
-                <TR><TD BGCOLOR="#c2ebff"><FONT COLOR="#004261" FACE="Courier" POINT-SIZE="12">input</FONT></TD></TR>
+                <TR><TD BGCOLOR="#c2ebff"><FONT COLOR="#004261" FACE="Courier" POINT-SIZE="12">Op</FONT></TD></TR>
             </TABLE>>'''
         else:
             node_text = f'''<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
                 <TR><TD>Unknown node</TD></TR>
-                <TR><TD BGCOLOR="#c9c9c9"><FONT FACE="Courier" POINT-SIZE="12">input</FONT></TD></TR>
+                <TR><TD BGCOLOR="#c9c9c9"><FONT FACE="Courier" POINT-SIZE="12">Unknown</FONT></TD></TR>
             </TABLE>>'''
         dot.node(str(id(node)), node_text)
             

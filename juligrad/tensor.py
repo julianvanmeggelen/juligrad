@@ -30,7 +30,7 @@ class Tensor():
         return Tensor.fromNumpy(np.random.uniform(low = low, high=high, size=size))
     
     @staticmethod
-    def randn(size: Tuple[int], loc: float = 0.0, scale: float = 0.0) -> Tensor:
+    def randn(size: Tuple[int], loc: float = 0.0, scale: float = 1.0) -> Tensor:
         return Tensor.fromNumpy(np.random.normal(loc=loc, scale=scale, size=size))
     
     @staticmethod
@@ -40,6 +40,7 @@ class Tensor():
     def backward(self, grad_out: Optional[Tensor] = None):
         if self.requiresGrad:
             if grad_out is None:
+                if (not len(self.shape) == 0) or not all([_ == 1 for _ in self.shape]): raise ValueError(f"Backward can only be called on scalar Tensor. (shape = {self.shape})")
                 self.grad = Tensor.fromScalar(1)
             else:
                 if not grad_out.shape == self.shape: raise ValueError(f"Shape of grad tensor ({grad_out.shape})  must be same as Tensor: ({self.shape})")
@@ -73,10 +74,13 @@ class Tensor():
     def __eq__(self, other: Tensor): return Tensor.fromNumpy(self.data == other.data)
     def sigmoid(self): return ops.Sigmoid().forward(self)
     def relu(self): return ops.ReLU().forward(self)
+    def softmax(self, axis: int = -1): return ops.Softmax().forward(self, axis=axis)
     def log(self): return ops.Log().forward(self)
     def expand(self, repeats: int, dim: int = 0): return ops.Expand().forward(self, repeats, dim)
-    def sum(self): return ops.Sum().forward(self)
+    def sum(self, axis: int = None): return ops.Sum().forward(self, axis=axis)
     def round(self, decimals: int): self.data = np.round(self.data, decimals=decimals); return self
+    def flatten(self, keepBatchDim: bool = True): return ops.Reshape().forward(self, newShape=(self.shape[0], -1) if keepBatchDim else (-1))
+    def reshape(self, newShape: tuple[int]): return ops.Reshape().forward(self, newShape=newShape)
     def __str__(self): return f"Tensor({self.data.__str__()})"
     def ___repr__(self): return self.__str__()
 
