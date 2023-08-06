@@ -87,6 +87,25 @@ class Matmul(Op):
         self.b.backward(Tensor(data=np.matmul(self.a.data.T, grad_out.data), requiresGrad=False))
         self.a.backward(Tensor(data=np.matmul(grad_out.data, self.b.data.T), requiresGrad=False))
 
+class CategoricalCrossEntropy(Op):
+    def forward(self, pred: Tensor, true: Tensor, logits: bool = True) -> Tensor:
+        """
+        true: Tensor with logits of shape (N,C)
+        pred: Tensor with true label index of (N,1)
+        """
+        if not logits: raise NotImplementedError("CategoricalCrossEntropy not supported for logits=False")
+        self.true, self.pred = true, pred
+        true_class_logits = pred.data[np.arange(len(pred.data)), true.data]
+        cross_entropy = - true_class_logits + np.log(np.sum(np.exp(pred.data), axis=-1))
+        res =  Tensor(data=cross_entropy, sourceOp=self)
+        return res
+    
+    def backward(self, grad_out: Tensor):
+        ones_true_class = np.zeros_like(self.pred.data)
+        ones_true_class[np.arange(len(self.pred.data)),self.true.data] = 1
+        softmax = np.exp(self.pred.data) / np.exp(self.pred.data).sum(axis=-1,keepdims=True)
+        self.pred.backward(Tensor(data=(-ones_true_class + softmax) / self.pred.shape[0],requiresGrad=False)) 
+
 # *** Unary Ops ***
 
 class Reshape(Op):
@@ -179,122 +198,7 @@ class Sum(Op):
         else:
             self.a.backward(Tensor(data=np.full(shape=self.shape_in, fill_value=grad_out.data), requiresGrad=False))
 
-class CategoricalCrossEntropy(Op):
-    def forward(self, pred: Tensor, true: Tensor, logits: bool = True) -> Tensor:
-        """
-        true: Tensor with logits of shape (N,C)
-        pred: Tensor with true label index of (N,1)
-        """
-        if not logits: raise NotImplementedError("CategoricalCrossEntropy not supported for logits=False")
-        self.true, self.pred = true, pred
-        true_class_logits = pred.data[np.arange(len(pred.data)), true.data]
-        cross_entropy = - true_class_logits + np.log(np.sum(np.exp(pred.data), axis=-1))
-        res =  Tensor(data=cross_entropy, sourceOp=self)
-        return res
-    
-    def backward(self, grad_out: Tensor):
-        ones_true_class = np.zeros_like(self.pred.data)
-        ones_true_class[np.arange(len(self.pred.data)),self.true.data] = 1
-        softmax = np.exp(self.pred.data) / np.exp(self.pred.data).sum(axis=-1,keepdims=True)
-        self.pred.backward(Tensor(data=(-ones_true_class + softmax) / self.pred.shape[0],requiresGrad=False))
-
-
-# # *** Conv Ops ***
-# class Convolute2d(Op):
-#     def __init__(self):
-#         super().__init__()
-
-#     def forward(self, a: Tensor, kernel: Tensor, bias: Optional[Tensor]=None, stride: Optional[int]=1) -> Tensor:
-#         """
-#         a: Tensor with shape (N, C_in, H,W)
-#         kernel: Tensor with shape (C_out, C_in, Hk,Wk)
-#         bias: Tensor with shape (C_out, 1)
-#         """
-       
-#         self.a = a
-#         self.kernel = kernel
-#         self.bias = bias
-#         self.stride: int = stride
-
-#         N, C_in,H,W =a.data.shape
-#         kernel_size = kernel.shape[-1]
-#         batch_stride, channel_stride, rows_stride, columns_stride = a.data.strides
-#         H_out = (H - kernel_size) // stride + 1
-#         W_out = (W - kernel_size) // stride + 1
-
-#         #Strided input
-#         strided_input = np.lib.stride_tricks.as_strided(
-#             a.data,
-#             shape=(
-#                 N,  
-#                 C_in,
-#                 H_out,
-#                 W_out,
-#                 kernel_size,
-#                 kernel_size
-#             ),
-#             strides=(
-#                 batch_stride,
-#                 channel_stride,
-#                 stride*rows_stride,  
-#                 stride*columns_stride,
-#                 rows_stride,
-#                 columns_stride
-#             ),
-#             writeable=False
-#         )
-        
-#         self.strided_input: DataLike = strided_input
-
-#         feature_map = np.einsum('bchwkt,fckt->bfhw',strided_input, kernel.data) + bias.data[np.newaxis,:,np.newaxis] 
-
-#         return Tensor(data=feature_map, sourceOp = self)
-    
-#     def backward(self, grad_out: Tensor):
-#         """
-#         grad_out: Tensor with shape (N, C_out, W_out, H_out)
-#         """
-#         kernel_rot = np.rot90(self.kernel.data, 2, axes=(2, 3))
-#         kernel_size = self.kernel.shape[-1]
-
-#         N, C_in,H,W = self.a.data.shape
-#         padding = kernel_size  - 1 
-#         #grad_out_pad: DataLike = grad_out.data#
-#         dilate = self.stride-1
-#         grad_out_dilated: DataLike = grad_out.data
-#         if dilate > 0:
-#             grad_out_dilated: DataLike = np.insert(grad_out_dilated, range(1, grad_out.shape[2]), 0, axis=2)
-#             grad_out_dilated = np.insert(grad_out_dilated, range(1, grad_out.shape[3]), 0, axis=3)
-#         grad_out_pad: DataLike = np.pad(grad_out_dilated, pad_width=((0,), (0,), (padding,), (padding,)), mode='constant', constant_values=(0.,))
-#         batch_stride, channel_stride, rows_stride, columns_stride = grad_out_pad.strides
-#         N, C_out, W_out, H_out = grad_out_pad.shape
-
-#         print(grad_out.shape, padding, grad_out_pad.shape)
-#         strided_grad_out =  np.lib.stride_tricks.as_strided(
-#             grad_out_pad,
-#             shape=(
-#                 N,
-#                 C_out,
-#                 H_out,
-#                 W_out,
-#                 kernel_size,
-#                 kernel_size
-#             ),
-#             strides=(
-#                 batch_stride,
-#                 channel_stride,
-#                 self.stride * rows_stride,
-#                 self.stride * columns_stride,
-#                 rows_stride,
-#                 columns_stride
-#             ),
-#             writeable=False
-#         )
-#         self.bias.backward(Tensor(data=np.sum(grad_out.data, axis=(0, 2, 3))[:,np.newaxis], requiresGrad=False))
-#         self.kernel.backward(Tensor(data=np.einsum('bihwkl,bohw->oikl', self.strided_input, grad_out.data), requiresGrad=False))
-#         self.a.backward(Tensor(data=np.einsum('bohwkl,oikl->bihw', strided_grad_out, kernel_rot), requiresGrad=False))
-#         return NotImplementedError
-        
+# *** Convolution Op ***
 
 def _getStrides(input:Tensor, output_size:int, kernel_size:int, padding:Optional[int]=0, stride:Optional[int]=1, dilate:Optional[int]=0):
     working_input = input.data
@@ -337,7 +241,6 @@ class Convolute2D(Op):
 
         out = np.einsum('bihwkl,oikl->bohw', self.a_strides, weight.data)
 
-        # add bias to kernels
         out += bias.data[np.newaxis, :, np.newaxis]
 
         return Tensor(data=out, sourceOp = self)

@@ -58,6 +58,6 @@ class Conv2d(Module):
     def forward(self, a:Tensor) -> Tensor:
         return ops.Convolute2D().forward(a,self.W, self.b, self.stride, self.padding)
 
-class CategoricalCrossEntropy(Module):
-    def forward(self, pred: Tensor, target: Tensor, axis:int=1) -> Tensor:
-        return - (target * (pred + Tensor.fromList([[10**-100]]).expand(repeats = pred.shape[0], dim=0).expand(repeats = pred.shape[1], dim=1)).log()).sum(axis=axis)
+# class CategoricalCrossEntropy(Module):
+#     def forward(self, pred: Tensor, target: Tensor, axis:int=1) -> Tensor:
+#         return - (target * (pred + Tensor.fromList([[10**-100]]).expand(repeats = pred.shape[0], dim=0).expand(repeats = pred.shape[1], dim=1)).log()).sum(axis=axis)
