@@ -67,7 +67,7 @@ class Tensor():
     def __mul__(self, other): return ops.Mul().forward(self, other)
     def __add__(self, other): return ops.Add().forward(self, other)
     def __sub__(self, other): return ops.Sub().forward(self, other)
-    def __sub__(self, other): return ops.Sub().forward(self, other)
+    def __truediv__(self, other): return ops.Div().forward(self, other)
     def __matmul__(self, other): return ops.Matmul().forward(self,other)
     def __pow__(self, x): return self * self if x == 2.0 else NotImplementedError
     def __neg__(self): return Tensor(data = np.full(self.shape,-1)) * self

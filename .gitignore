@@ -171,3 +171,11 @@ juligrad/__pycache__/__init__.cpython-311.pyc
 juligrad/__pycache__/__init__.cpython-311.pyc
 juligrad/__pycache__/graph.cpython-311.pyc
 
+
+./data/*
+data/*
+
+*.pyc.*
+.pyc
+
+juligrad/__pycache__/__init__.cpython-311.pyc

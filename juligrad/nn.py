@@ -51,7 +51,7 @@ class MLP(Module):
 class Conv2d(Module):
     def __init__(self, C: int, C_out, kernelSize: int, padding: Optional[int], stride: Optional[int]) -> None:
         super().__init__()
-        self.W: Tensor = Tensor.randn(size=(C_out, C, kernelSize, kernelSize))
+        self.W: Tensor = Tensor.randn(size=(C_out, C, kernelSize, kernelSize), scale=0.01)
         self.b: Tensor = Tensor.zeros(size=(C_out,1))
         self.stride, self.padding = stride, padding
     

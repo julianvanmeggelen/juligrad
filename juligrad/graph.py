@@ -42,7 +42,7 @@ def generateGraph(sink: Union[Op, Tensor]):
                 _draw_edge(parent, node)
                 _draw_parents(parent)
 
-    dot = graphviz.Digraph(graph_attr={'rankdir': 'BT'}, node_attr={'shape': 'plaintext'})
+    dot = graphviz.Digraph(graph_attr={'rankdir': 'LR'}, node_attr={'shape': 'plaintext'})
     _draw_node(sink)       
     _draw_parents(sink)  
     return dot

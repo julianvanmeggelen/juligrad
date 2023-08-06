@@ -5,7 +5,7 @@ import juligrad.tensor as tensor
 from juligrad.tensor import Tensor, DataLike
 
 class Op:
-    def forward(self, **kwargs: Any) -> Tensor:
+    def forward(self, *args: Any) -> Tensor:
         raise NotImplementedError(f"Forward not implemented for {type(self)}")
     
     def backward(self, grad_out: Tensor):
@@ -24,8 +24,19 @@ class Mul(Op):
         return Tensor(data=(a.data*b.data), sourceOp=self)
     
     def backward(self, grad_out: Tensor) -> None:
-        self.a.backward(Tensor(grad_out.data * self.a.data))
-        self.b.backward(Tensor(grad_out.data * self.b.data))
+        self.a.backward(Tensor(grad_out.data * self.b.data))
+        self.b.backward(Tensor(grad_out.data * self.a.data))
+
+class Div(Op):
+    def forward(self, a: Tensor, b: Tensor) -> Tensor:
+        self.a = a
+        self.b = b
+        if not a.shape == b.shape: raise ValueError(f"Shape mismatch for Op {type(self)}: {a.shape} * {b.shape}")
+        return Tensor(data=(a.data/b.data), sourceOp=self)
+    
+    def backward(self, grad_out: Tensor) -> None:
+        self.a.backward(Tensor(grad_out.data / self.b.data))
+        self.b.backward(Tensor(grad_out.data / self.a.data))
 
 class Add(Op):
     def forward(self, a: Tensor, b: Tensor) -> Tensor:
@@ -121,10 +132,12 @@ class Softmax(Op):
         """
         self.a = a
         self.axis=axis
-        self.softmaxx: DataLike = np.exp(a.data)/np.sum(np.exp(a.data), axis=axis, keepdims=True)
+        m = np.max(a.data)
+        self.softmaxx: DataLike = np.exp(a.data - m)/np.sum(np.exp(a.data-m), axis=axis)[:,None]
         return Tensor(data=self.softmaxx, sourceOp = self)
 
     def backward(self, grad_out:Tensor):
+        print(self.softmaxx * (grad_out.data -(grad_out.data * self.softmaxx).sum(axis=self.axis, keepdims=True)))
         self.a.backward(Tensor(data = self.softmaxx * (grad_out.data -(grad_out.data * self.softmaxx).sum(axis=self.axis, keepdims=True)), requiresGrad = False))
 
 class ReLU(Op):
@@ -166,14 +179,24 @@ class Sum(Op):
         else:
             self.a.backward(Tensor(data=np.full(shape=self.shape_in, fill_value=grad_out.data), requiresGrad=False))
 
-# class CategoricalCrossEntropy(Op):
-#      def forward(self, true: Tensor) -> Tensor:
-#         self.shape_in = a.shape
-#         self.a = a
-#         return Tensor.fromScalar(a.data.sum(),  sourceOp=self)
+class CategoricalCrossEntropy(Op):
+    def forward(self, pred: Tensor, true: Tensor, logits: bool = True) -> Tensor:
+        """
+        true: Tensor with logits of shape (N,C)
+        pred: Tensor with true label index of (N,1)
+        """
+        if not logits: raise NotImplementedError("CategoricalCrossEntropy not supported for logits=False")
+        self.true, self.pred = true, pred
+        true_class_logits = pred.data[np.arange(len(pred.data)), true.data]
+        cross_entropy = - true_class_logits + np.log(np.sum(np.exp(pred.data), axis=-1))
+        res =  Tensor(data=cross_entropy, sourceOp=self)
+        return res
     
-#     def backward(self, grad_out: Tensor):
-#         self.a.backward(Tensor(data=np.full(shape=self.shape_in, fill_value=grad_out.data), requiresGrad=False))
+    def backward(self, grad_out: Tensor):
+        ones_true_class = np.zeros_like(self.pred.data)
+        ones_true_class[np.arange(len(self.pred.data)),self.true.data] = 1
+        softmax = np.exp(self.pred.data) / np.exp(self.pred.data).sum(axis=-1,keepdims=True)
+        self.pred.backward(Tensor(data=(-ones_true_class + softmax) / self.pred.shape[0],requiresGrad=False))
 
 
 # # *** Conv Ops ***

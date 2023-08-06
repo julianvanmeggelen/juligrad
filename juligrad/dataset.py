@@ -11,6 +11,9 @@ import array
 import numpy
 import struct
 import numpy as np
+import math
+from typing import Union
+from collections.abc import Iterable
 
 DATA_DIR = './data/'
 if not os.path.exists(DATA_DIR): os.mkdir(DATA_DIR)
@@ -87,6 +90,12 @@ def convertOneHot(a: Tensor):
     b[np.arange(a.size), a] = 1
     return b
 
+def splitBatches(a: Union[list[Tensor], tuple[Tensor], Tensor], batch_size: int, axis: int=0) -> Union[list[Tensor], Iterable[list[Tensor]]]:
+    if type(a) is tuple or type(a) is list: return type(a)([splitBatches(el, batch_size, axis) for el in a])
+    data = a.data
+    nBatches = math.ceil(a.shape[axis]/batch_size)
+    return [Tensor.fromNumpy(batch) for batch in np.array_split(data,nBatches, axis=axis)]
+
 def load_mnist(set:MNIST = MNIST.train, dir=None, limit:int=None):
     if dir is None: dir = os.path.join(DATA_DIR,'mnist')
     URL = 'http://yann.lecun.com/exdb/mnist/'
@@ -100,6 +109,6 @@ def load_mnist(set:MNIST = MNIST.train, dir=None, limit:int=None):
             res = MNIST_parse_idx(fd)
             return res[:limit] if limit is not None else res
  
-    return Tensor.fromNumpy(_load(set.value[0])[:,np.newaxis,:,:], requiresGrad=False), Tensor.fromNumpy(convertOneHot(_load(set.value[1])), requiresGrad=False)
+    return Tensor.fromNumpy(_load(set.value[0])[:,np.newaxis,:,:], requiresGrad=False), Tensor.fromNumpy(_load(set.value[1]), requiresGrad=False)
 
 
